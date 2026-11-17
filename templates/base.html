@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Host Monitor{% endblock %} · Demo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;550;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="{{ url_for('dashboard') if session.get('logged_in') else url_for('login') }}">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-text">
+        <strong>Host Monitor</strong>
+        <span class="brand-sub">Local Linux demo · read-only</span>
+      </span>
+    </a>
+    <nav class="topnav" aria-label="Primary">
+      {% if session.get('logged_in') %}
+        <a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
+        <a class="nav-link" href="{{ url_for('add_server') }}">Add server</a>
+        <span class="nav-meta">{{ session.get('username', 'admin') }}</span>
+        <form method="post" action="{{ url_for('logout') }}" class="inline-form">
+          <button type="submit" class="btn-ghost">Sign out</button>
+        </form>
+      {% else %}
+        <span class="nav-pill">Sign in required</span>
+      {% endif %}
+    </nav>
+  </header>
+
+  <main class="shell">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="foot">
+    <span>Read-only demo · metrics via SSH allowlisted commands</span>
+  </footer>
+</body>
+</html>

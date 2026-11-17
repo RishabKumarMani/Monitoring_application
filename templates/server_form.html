@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<section class="hero-panel">
+  <p class="eyebrow">Inventory</p>
+  <h1>{{ page_title }}</h1>
+  <p class="lede">
+    All fields are required. SSH auth for this demo uses a password (not a key file).
+  </p>
+</section>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <ul class="flash-list" role="alert">
+      {% for category, message in messages %}
+        <li class="flash flash-{{ category }}">{{ message }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+{% endwith %}
+
+<section class="panel form-panel">
+  <form method="post" class="login-form" autocomplete="off">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+    <label class="field">
+      <span>Label</span>
+      <input type="text" name="label" required value="{{ form.label }}">
+    </label>
+    <label class="field">
+      <span>Hostname or IP</span>
+      <input type="text" name="host" required value="{{ form.host }}">
+    </label>
+    <label class="field">
+      <span>SSH port</span>
+      <input type="number" name="ssh_port" required min="1" max="65535" value="{{ form.ssh_port }}">
+    </label>
+    <label class="field">
+      <span>SSH username</span>
+      <input type="text" name="ssh_username" required value="{{ form.ssh_username }}">
+    </label>
+    <label class="field">
+      <span>SSH password{% if mode == 'edit' %} <em class="hint">(leave blank to keep current)</em>{% endif %}</span>
+      <input type="password" name="ssh_password" {% if mode == 'add' %}required{% endif %} value="" autocomplete="new-password">
+    </label>
+
+    <div class="form-actions">
+      <button type="submit" class="btn-primary">{% if mode == 'add' %}Add server{% else %}Save changes{% endif %}</button>
+      <a class="btn-ghost" href="{{ url_for('dashboard') }}">Cancel</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}{{ server.label }}{% endblock %}
+
+{% block content %}
+<section class="hero-panel">
+  <p class="eyebrow">Server detail</p>
+  <h1>{{ server.label }}</h1>
+  <p class="lede mono">{{ server.host }}:{{ server.ssh_port }} · {{ server.ssh_username }}</p>
+</section>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>Live metrics</h2>
+    <span class="badge">{{ metrics.fetched_at }}</span>
+  </div>
+
+  {% if metrics.ok %}
+  <div class="metric-stats detail-stats">
+    <div class="stat">
+      <span class="stat-label">CPU</span>
+      <span class="stat-value">{% if metrics.cpu_pct is not none %}{{ metrics.cpu_pct }}%{% else %}—{% endif %}</span>
+      {% if metrics.load %}
+      <span class="stat-sub mono">load {{ metrics.load['1m'] }} / {{ metrics.load['5m'] }} / {{ metrics.load['15m'] }}</span>
+      {% endif %}
+    </div>
+    <div class="stat">
+      <span class="stat-label">Memory</span>
+      {% if metrics.memory %}
+      <span class="stat-value">{{ metrics.memory.used_pct }}%</span>
+      <span class="stat-sub mono">{{ metrics.memory.used_mb }} used · {{ metrics.memory.available_mb }} avail · {{ metrics.memory.total_mb }} total MiB</span>
+      {% else %}
+      <span class="stat-value">—</span>
+      {% endif %}
+    </div>
+    <div class="stat">
+      <span class="stat-label">Uptime</span>
+      <span class="stat-value">{{ metrics.uptime or '—' }}</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Disk /</span>
+      {% if metrics.disk %}
+      <span class="stat-value">{{ metrics.disk.use_pct }}</span>
+      <span class="stat-sub mono">{{ metrics.disk.used }} / {{ metrics.disk.size }} ({{ metrics.disk.avail }} free)</span>
+      {% else %}
+      <span class="stat-value">—</span>
+      {% endif %}
+    </div>
+  </div>
+  {% else %}
+  <p class="metric-error">{{ metrics.error or 'Unable to collect metrics.' }}</p>
+  <p class="muted">Verify SSH connectivity from this machine to the target host.</p>
+  {% endif %}
+
+  <div class="form-actions" style="margin-top: 1.25rem;">
+    <a class="btn-ghost" href="{{ url_for('dashboard') }}">← Dashboard</a>
+    <a class="btn-ghost" href="{{ url_for('edit_server', server_id=server.id) }}">Edit</a>
+  </div>
+</section>
+
+<script>
+  setTimeout(function () { window.location.reload(); }, {{ refresh_seconds * 1000 }});
+</script>
+{% endblock %}
