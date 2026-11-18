@@ -3,7 +3,7 @@
 import sqlite3
 from pathlib import Path
 
-# Primary SSH auth for this demo: password (stored in DB; never rendered in HTML)
+# Auth methods: "password" | "none" (key/agent / passwordless)
 
 
 def get_connection(db_path):
@@ -23,28 +23,42 @@ def init_db(db_path):
                 host TEXT NOT NULL,
                 ssh_port INTEGER NOT NULL,
                 ssh_username TEXT NOT NULL,
-                ssh_password TEXT NOT NULL
+                ssh_password TEXT NOT NULL DEFAULT '',
+                auth_method TEXT NOT NULL DEFAULT 'password'
             )
             """
         )
+        cols = {
+            row[1]
+            for row in conn.execute("PRAGMA table_info(servers)").fetchall()
+        }
+        if "auth_method" not in cols:
+            conn.execute(
+                "ALTER TABLE servers ADD COLUMN auth_method TEXT NOT NULL DEFAULT 'password'"
+            )
         conn.commit()
 
 
 def _row_public(row):
     """Serialize for UI — excludes ssh_password."""
+    keys = row.keys()
     return {
         "id": row["id"],
         "label": row["label"],
         "host": row["host"],
         "ssh_port": row["ssh_port"],
         "ssh_username": row["ssh_username"],
+        "auth_method": row["auth_method"] if "auth_method" in keys else "password",
     }
 
 
 def list_servers(db_path):
     with get_connection(db_path) as conn:
         rows = conn.execute(
-            "SELECT id, label, host, ssh_port, ssh_username FROM servers ORDER BY label"
+            """
+            SELECT id, label, host, ssh_port, ssh_username, auth_method
+            FROM servers ORDER BY label
+            """
         ).fetchall()
     return [_row_public(r) for r in rows]
 
@@ -62,35 +76,56 @@ def get_server(db_path, server_id, include_secret=False):
     return data
 
 
-def create_server(db_path, label, host, ssh_port, ssh_username, ssh_password):
+def create_server(
+    db_path, label, host, ssh_port, ssh_username, ssh_password, auth_method="password"
+):
+    if auth_method not in ("password", "none"):
+        auth_method = "password"
+    if auth_method == "none":
+        ssh_password = ""
     with get_connection(db_path) as conn:
         cur = conn.execute(
             """
-            INSERT INTO servers (label, host, ssh_port, ssh_username, ssh_password)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO servers
+              (label, host, ssh_port, ssh_username, ssh_password, auth_method)
+            VALUES (?, ?, ?, ?, ?, ?)
             """,
-            (label, host, ssh_port, ssh_username, ssh_password),
+            (label, host, ssh_port, ssh_username, ssh_password or "", auth_method),
         )
         conn.commit()
         return cur.lastrowid
 
 
 def update_server(
-    db_path, server_id, label, host, ssh_port, ssh_username, ssh_password=None
+    db_path,
+    server_id,
+    label,
+    host,
+    ssh_port,
+    ssh_username,
+    ssh_password=None,
+    auth_method=None,
 ):
-    """If ssh_password is None or empty, keep the existing password."""
+    """If ssh_password is None or empty (and method is password), keep existing password."""
     existing = get_server(db_path, server_id, include_secret=True)
     if existing is None:
         return False
-    password = ssh_password if ssh_password else existing["ssh_password"]
+    method = auth_method or existing.get("auth_method") or "password"
+    if method not in ("password", "none"):
+        method = "password"
+    if method == "none":
+        password = ""
+    else:
+        password = ssh_password if ssh_password else existing["ssh_password"]
     with get_connection(db_path) as conn:
         conn.execute(
             """
             UPDATE servers
-            SET label = ?, host = ?, ssh_port = ?, ssh_username = ?, ssh_password = ?
+            SET label = ?, host = ?, ssh_port = ?, ssh_username = ?,
+                ssh_password = ?, auth_method = ?
             WHERE id = ?
             """,
-            (label, host, ssh_port, ssh_username, password, server_id),
+            (label, host, ssh_port, ssh_username, password, method, server_id),
         )
         conn.commit()
     return True

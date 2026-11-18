@@ -82,3 +82,4 @@ def test_parse_ports_ss():
     ports = parse_ports(sample)
     assert ports["total"] >= 2
     assert ports["tcp"] >= 2
+    assert ports["entries"]

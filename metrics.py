@@ -3,6 +3,7 @@
 import re
 from datetime import datetime, timezone
 
+from local_client import is_local_host, run_many_local
 from ssh_client import SSHError, run_many
 
 FULL_KEYS = [
@@ -211,7 +212,8 @@ def parse_ports(text):
                 udp += 1
             else:
                 tcp += 1
-    return {"items": ports[:40], "tcp": tcp, "udp": udp, "total": len(ports)}
+    # Use "entries" (not "items") — Jinja treats .items as dict.items()
+    return {"entries": ports[:40], "tcp": tcp, "udp": udp, "total": len(ports)}
 
 
 def parse_processes(text):
@@ -249,13 +251,28 @@ def _empty_metrics(error=None, ok=False):
         "ports": None,
         "processes": None,
         "fetched_at": datetime.now(timezone.utc).strftime("%H:%M:%S UTC"),
+        "source": None,
     }
 
 
-def collect_all_metrics(host, port, username, password):
-    """Full metric set for Host Monitor panels."""
+def collect_all_metrics(host, port, username, password, auth_method="password"):
+    """Full metric set for Host Monitor panels.
+
+    localhost / 127.0.0.1 / ::1 are collected locally (no SSH) because sshd
+    is often not running on the demo machine.
+    """
     try:
-        raw = run_many(host, port, username, password, FULL_KEYS)
+        if is_local_host(host):
+            raw = run_many_local(FULL_KEYS)
+        else:
+            raw = run_many(
+                host,
+                port,
+                username,
+                password,
+                FULL_KEYS,
+                auth_method=auth_method or "password",
+            )
         return {
             "ok": True,
             "error": None,
@@ -268,11 +285,12 @@ def collect_all_metrics(host, port, username, password):
             "ports": parse_ports(raw.get("ports")),
             "processes": parse_processes(raw.get("processes")),
             "fetched_at": datetime.now(timezone.utc).strftime("%H:%M:%S UTC"),
+            "source": "local" if is_local_host(host) else "ssh",
         }
     except SSHError as exc:
         return _empty_metrics(error=str(exc), ok=False)
 
 
 # Back-compat alias used by older imports
-def collect_dashboard_metrics(host, port, username, password):
-    return collect_all_metrics(host, port, username, password)
+def collect_dashboard_metrics(host, port, username, password, auth_method="password"):
+    return collect_all_metrics(host, port, username, password, auth_method=auth_method)

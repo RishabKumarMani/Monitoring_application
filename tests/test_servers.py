@@ -41,6 +41,7 @@ def test_add_server_form_and_create(auth_client):
             "ssh_port": "22",
             "ssh_username": "ubuntu",
             "ssh_password": "pw",
+            "auth_method": "password",
         },
         follow_redirects=False,
     )
@@ -49,6 +50,33 @@ def test_add_server_form_and_create(auth_client):
     dash = auth_client.get("/")
     assert b"db1" in dash.data
     assert b"pw" not in dash.data
+
+
+def test_add_server_without_password(auth_client, app):
+    import db as inventory
+
+    token = _csrf(auth_client)
+    response = auth_client.post(
+        "/servers/add",
+        data={
+            "csrf_token": token,
+            "label": "keyhost",
+            "host": "10.1.1.9",
+            "ssh_port": "22",
+            "ssh_username": "ubuntu",
+            "ssh_password": "",
+            "auth_method": "none",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+    servers = inventory.list_servers(app.config["DATABASE"])
+    match = [s for s in servers if s["label"] == "keyhost"][0]
+    assert match["auth_method"] == "none"
+    secret = inventory.get_server(
+        app.config["DATABASE"], match["id"], include_secret=True
+    )
+    assert secret["ssh_password"] == ""
 
 
 def test_edit_and_delete_server(auth_client, app):
@@ -68,6 +96,7 @@ def test_edit_and_delete_server(auth_client, app):
             "ssh_port": "22",
             "ssh_username": "root",
             "ssh_password": "",
+            "auth_method": "password",
         },
         follow_redirects=True,
     )

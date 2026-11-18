@@ -35,3 +35,17 @@ def test_crud_and_public_list_hides_password(tmp_path):
 
     assert inventory.delete_server(path, sid) is True
     assert inventory.list_servers(path) == []
+
+
+def test_create_without_password_auth(tmp_path):
+    path = str(tmp_path / "inv2.db")
+    inventory.init_db(path)
+    sid = inventory.create_server(
+        path, "nopw", "10.0.0.9", 22, "ubuntu", "", auth_method="none"
+    )
+    row = inventory.get_server(path, sid, include_secret=True)
+    assert row["auth_method"] == "none"
+    assert row["ssh_password"] == ""
+    public = inventory.list_servers(path)[0]
+    assert public["auth_method"] == "none"
+    assert "ssh_password" not in public

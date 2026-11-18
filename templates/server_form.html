@@ -6,7 +6,9 @@
   <p class="eyebrow">Inventory</p>
   <h1>{{ page_title }}</h1>
   <p class="lede">
-    All fields are required. SSH auth for this demo uses a password (not a key file).
+    For <strong>localhost</strong> / <strong>127.0.0.1</strong>, metrics are collected
+    on this machine (SSH not required — sshd is often stopped). Remote hosts need SSH.
+    Auth: <strong>Password</strong> or <strong>Without password</strong> (keys/agent).
   </p>
 </section>
 
@@ -21,7 +23,7 @@
 {% endwith %}
 
 <section class="panel form-panel">
-  <form method="post" class="login-form" autocomplete="off">
+  <form method="post" class="login-form" id="server-form" autocomplete="off">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
     <label class="field">
@@ -41,9 +43,25 @@
       <input type="text" name="ssh_username" required value="{{ form.ssh_username }}">
     </label>
     <label class="field">
-      <span>SSH password{% if mode == 'edit' %} <em class="hint">(leave blank to keep current)</em>{% endif %}</span>
-      <input type="password" name="ssh_password" {% if mode == 'add' %}required{% endif %} value="" autocomplete="new-password">
+      <span>SSH authentication</span>
+      <select name="auth_method" id="auth_method" required>
+        <option value="password" {% if form.auth_method != 'none' %}selected{% endif %}>Password</option>
+        <option value="none" {% if form.auth_method == 'none' %}selected{% endif %}>Without password</option>
+      </select>
     </label>
+
+    <div id="password-wrap" class="field-wrap {% if form.auth_method == 'none' %}is-hidden{% endif %}">
+      <label class="field" for="ssh_password">
+        <span>SSH password{% if mode == 'edit' %} <em class="hint">(leave blank to keep current)</em>{% endif %}</span>
+        <input type="password" name="ssh_password" id="ssh_password" value="" autocomplete="new-password"
+               {% if mode == 'add' and form.auth_method != 'none' %}required{% endif %}
+               {% if form.auth_method == 'none' %}disabled{% endif %}>
+      </label>
+    </div>
+
+    <p class="hint" id="nopass-hint" {% if form.auth_method != 'none' %}hidden{% endif %}>
+      Without password uses default SSH keys and/or ssh-agent on this host (no password stored or requested).
+    </p>
 
     <div class="form-actions">
       <button type="submit" class="btn-primary">{% if mode == 'add' %}Add server{% else %}Save changes{% endif %}</button>
@@ -51,4 +69,37 @@
     </div>
   </form>
 </section>
+
+<script>
+(function () {
+  var select = document.getElementById('auth_method');
+  var wrap = document.getElementById('password-wrap');
+  var input = document.getElementById('ssh_password');
+  var hint = document.getElementById('nopass-hint');
+  var isAdd = {{ 'true' if mode == 'add' else 'false' }};
+
+  function sync() {
+    var withoutPassword = select.value === 'none';
+    wrap.classList.toggle('is-hidden', withoutPassword);
+    hint.hidden = !withoutPassword;
+
+    if (withoutPassword) {
+      input.value = '';
+      input.removeAttribute('required');
+      input.disabled = true; // excluded from validation + submit
+    } else {
+      input.disabled = false;
+      if (isAdd) {
+        input.setAttribute('required', 'required');
+      } else {
+        input.removeAttribute('required');
+      }
+    }
+  }
+
+  select.addEventListener('change', sync);
+  select.addEventListener('input', sync);
+  sync();
+})();
+</script>
 {% endblock %}

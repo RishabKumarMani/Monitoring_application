@@ -32,6 +32,24 @@ def test_run_command_success(mock_cls):
 
 
 @patch("ssh_client.paramiko.SSHClient")
+def test_run_command_without_password_uses_keys(mock_cls):
+    client = MagicMock()
+    mock_cls.return_value = client
+    stdout = MagicMock()
+    stdout.read.return_value = b"ok"
+    stdout.channel.recv_exit_status.return_value = 0
+    stderr = MagicMock()
+    stderr.read.return_value = b""
+    client.exec_command.return_value = (MagicMock(), stdout, stderr)
+
+    run_command("10.0.0.1", 22, "user", "", "memory", auth_method="none")
+    kwargs = client.connect.call_args.kwargs
+    assert kwargs["password"] is None
+    assert kwargs["allow_agent"] is True
+    assert kwargs["look_for_keys"] is True
+
+
+@patch("ssh_client.paramiko.SSHClient")
 def test_auth_failure(mock_cls):
     import paramiko
 

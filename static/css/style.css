@@ -376,7 +376,12 @@ a {
   font-size: 0.9rem;
 }
 
-.field input {
+.field-wrap.is-hidden {
+  display: none !important;
+}
+
+.field input,
+.field select {
   font: inherit;
   padding: 0.7rem 0.8rem;
   border: 1px solid var(--line);
@@ -385,7 +390,12 @@ a {
   color: var(--ink);
 }
 
-.field input:focus {
+.field select {
+  cursor: pointer;
+}
+
+.field input:focus,
+.field select:focus {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }

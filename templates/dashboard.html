@@ -3,10 +3,11 @@
 
 {% block content %}
 <section class="hero-panel">
-  <p class="eyebrow">Monitoring dashboard</p>
+  <p class="eyebrow">Monitoring dashboard · read-only</p>
   <h1>Monitoring dashboard</h1>
   <p class="lede">
-    Live host metrics over SSH. Select a server below — panels refresh every {{ refresh_seconds }}s.
+    Live host metrics over SSH (read-only allowlisted commands).
+    Select a server below — panels refresh every {{ refresh_seconds }}s.
   </p>
 </section>
 
@@ -30,7 +31,7 @@
   </div>
 
   <div class="servers-box">
-    <p class="servers-label">Servers</p>
+    <p class="servers-label">Inventory</p>
     {% if servers %}
     <div class="server-chips">
       {% for s in servers %}
@@ -38,6 +39,7 @@
          href="{{ url_for('dashboard', server=s.id) }}">
         <strong>{{ s.label }}</strong>
         <span class="mono">{{ s.host }}:{{ s.ssh_port }}</span>
+        <span class="mono">{% if s.auth_method == 'none' %}no-pass{% else %}password{% endif %}</span>
       </a>
       {% endfor %}
     </div>
@@ -53,23 +55,34 @@
     </div>
     {% endif %}
     {% else %}
+    <p class="empty-title">No servers yet</p>
     <p class="empty-copy" style="margin:0;">
-      No servers yet — add a Linux host to populate CPU, memory, disk, network, ports, and processes.
+      Add a Linux host to populate CPU, memory, disk, load, network, ports, and processes.
+      Metric cards stay empty until a reachable SSH target is registered.
     </p>
     {% endif %}
   </div>
 </section>
 
-<section class="cards-grid" aria-label="Host metrics">
-  {% set m = metrics %}
+{% set m = metrics %}
 
+{% if selected and m and not m.ok %}
+<section class="panel">
+  <p class="metric-error">{{ m.error or 'Unable to collect metrics.' }}</p>
+  <p class="muted" style="margin:0.35rem 0 0;">
+    Check host reachability, SSH port, username, and password. The app stays up; try again after fixing credentials.
+  </p>
+</section>
+{% endif %}
+
+<section class="cards-grid" aria-label="Host metrics">
   <article class="hm-card">
     <h3>CPU</h3>
     <p class="sub">Overall usage %</p>
     {% if m and m.ok and m.cpu_pct is not none %}
       <div class="hm-value">{{ m.cpu_pct }}%</div>
     {% else %}
-      <div class="hm-empty">{% if m and not m.ok %}{{ m.error }}{% else %}No data yet{% endif %}</div>
+      <div class="hm-empty">No data yet</div>
     {% endif %}
   </article>
 
@@ -80,7 +93,7 @@
       <div class="hm-value">{{ m.memory.used_pct }}%</div>
       <div class="hm-meta">{{ m.memory.used_mb }} used · {{ m.memory.free_mb }} free · {{ m.memory.total_mb }} MiB</div>
     {% else %}
-      <div class="hm-empty">{% if m and not m.ok %}{{ m.error }}{% else %}No data yet{% endif %}</div>
+      <div class="hm-empty">No data yet</div>
     {% endif %}
   </article>
 
@@ -91,7 +104,7 @@
       <div class="hm-value">{{ m.disk.use_pct }}</div>
       <div class="hm-meta">{{ m.disk.used }} / {{ m.disk.size }} ({{ m.disk.avail }} free)</div>
     {% else %}
-      <div class="hm-empty">{% if m and not m.ok %}{{ m.error }}{% else %}No data yet{% endif %}</div>
+      <div class="hm-empty">No data yet</div>
     {% endif %}
   </article>
 
@@ -102,42 +115,59 @@
       <div class="hm-value">{{ m.load['1m'] }}</div>
       <div class="hm-meta">{{ m.load['1m'] }} / {{ m.load['5m'] }} / {{ m.load['15m'] }}</div>
     {% else %}
-      <div class="hm-empty">{% if m and not m.ok %}{{ m.error }}{% else %}No data yet{% endif %}</div>
+      <div class="hm-empty">No data yet</div>
     {% endif %}
   </article>
 
   <article class="hm-card">
     <h3>Network</h3>
-    <p class="sub">RX / TX</p>
+    <p class="sub">RX / TX (cumulative)</p>
     {% if m and m.ok and m.network %}
       <div class="hm-value">{{ m.network.rx }}</div>
       <div class="hm-meta">RX {{ m.network.rx }} · TX {{ m.network.tx }}</div>
     {% else %}
-      <div class="hm-empty">{% if m and not m.ok %}{{ m.error }}{% else %}No data yet{% endif %}</div>
+      <div class="hm-empty">No data yet</div>
     {% endif %}
   </article>
 
   <article class="hm-card">
     <h3>Listening ports</h3>
-    <p class="sub">TCP / UDP</p>
+    <p class="sub">TCP / UDP on the target</p>
     {% if m and m.ok and m.ports %}
       <div class="hm-value">{{ m.ports.total }}</div>
       <div class="hm-meta">TCP {{ m.ports.tcp }} · UDP {{ m.ports.udp }}</div>
     {% else %}
-      <div class="hm-empty">{% if m and not m.ok %}{{ m.error }}{% else %}No data yet{% endif %}</div>
+      <div class="hm-empty">No data yet</div>
+    {% endif %}
+  </article>
+
+  <article class="hm-card wide">
+    <h3>Listening ports (detail)</h3>
+    <p class="sub">From <span class="mono">ss</span>/<span class="mono">netstat</span> on the target only — not a network scan</p>
+    {% if m and m.ok and m.ports and m.ports.entries %}
+      <table class="port-table">
+        <thead><tr><th>Proto</th><th>Port</th><th>Local address</th></tr></thead>
+        <tbody>
+          {% for p in m.ports.entries[:20] %}
+          <tr><td>{{ p.proto }}</td><td class="mono">{{ p.port }}</td><td class="mono">{{ p.local }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div class="hm-empty">No data yet</div>
     {% endif %}
   </article>
 
   <article class="hm-card wide">
     <h3>Processes</h3>
-    <p class="sub">Top by CPU</p>
+    <p class="sub">Top 20 by CPU (fixed allowlisted <span class="mono">ps</span>)</p>
     {% if m and m.ok and m.processes %}
       <table class="process-table">
         <thead>
           <tr><th>PID</th><th>User</th><th>CPU %</th><th>Mem %</th><th>Command</th></tr>
         </thead>
         <tbody>
-          {% for p in m.processes[:12] %}
+          {% for p in m.processes[:20] %}
           <tr>
             <td class="mono">{{ p.pid }}</td>
             <td>{{ p.user }}</td>
@@ -148,20 +178,15 @@
           {% endfor %}
         </tbody>
       </table>
-    {% elif m and m.ok and m.ports and m.ports.items %}
-      <table class="port-table">
-        <thead><tr><th>Proto</th><th>Port</th><th>Local</th></tr></thead>
-        <tbody>
-          {% for p in m.ports.items[:15] %}
-          <tr><td>{{ p.proto }}</td><td class="mono">{{ p.port }}</td><td class="mono">{{ p.local }}</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
     {% else %}
-      <div class="hm-empty">{% if m and not m.ok %}{{ m.error }}{% else %}No data yet{% endif %}</div>
+      <div class="hm-empty">No data yet</div>
     {% endif %}
     {% if m and m.ok %}
-      <p class="hm-meta" style="margin-top:0.75rem;">Updated {{ m.fetched_at }}{% if m.uptime %} · uptime {{ m.uptime }}{% endif %}</p>
+      <p class="hm-meta" style="margin-top:0.75rem;">
+        Updated {{ m.fetched_at }}{% if m.uptime %} · uptime {{ m.uptime }}{% endif %}
+        · {% if m.source == 'local' %}local (no SSH){% else %}SSH{% endif %}
+        · read-only
+      </p>
     {% endif %}
   </article>
 </section>

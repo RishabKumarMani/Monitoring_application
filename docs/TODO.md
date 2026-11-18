@@ -135,19 +135,19 @@ Incremental checklist for AI-assisted development. Complete one checkbox (or one
 - [x] **Docs:** Disk fields explained
 
 ### 5.5 Network
-- [ ] Fetch simple RX/TX or interface snapshot
-- [ ] **Security:** Same as above
-- [ ] **Docs:** Network fields explained
+- [x] Fetch simple RX/TX or interface snapshot
+- [x] **Security:** Same as above
+- [x] **Docs:** Network fields explained
 
 ### 5.6 Ports
-- [ ] Fetch listening ports
-- [ ] **Security:** Read-only; no port scanning of third parties — only local `ss`/`netstat` on the target via SSH
-- [ ] **Docs:** How ports are listed
+- [x] Fetch listening ports
+- [x] **Security:** Read-only; no port scanning of third parties — only local `ss`/`netstat` on the target via SSH
+- [x] **Docs:** How ports are listed
 
 ### 5.7 Process list
-- [ ] Top 20 processes by CPU
-- [ ] **Security:** Do not run arbitrary user process filters from query string without validation
-- [ ] **Docs:** Process list limits (top 20)
+- [x] Top 20 processes by CPU
+- [x] **Security:** Do not run arbitrary user process filters from query string without validation
+- [x] **Docs:** Process list limits (top 20)
 
 ### 5.8 Metrics parser tests
 - [x] Unit tests with sample command output fixtures (no live SSH)
@@ -184,30 +184,30 @@ Incremental checklist for AI-assisted development. Complete one checkbox (or one
 ## Phase 8 — Polish, security pass, CI/CD complete
 
 ### 8.1 UI polish
-- [ ] Consistent layout, empty/loading/error states
-- [ ] Read-only labeling where helpful
-- [ ] **Docs:** Quick demo walkthrough (login → add server → view metrics)
+- [x] Consistent layout, empty/loading/error states
+- [x] Read-only labeling where helpful
+- [x] **Docs:** Quick demo walkthrough (login → add server → view metrics)
 
 ### 8.2 Security checklist (demo-appropriate)
-- [ ] Confirm metrics UI cannot mutate remote hosts
-- [ ] Confirm `.gitignore` covers DB, `.env`, keys
-- [ ] Confirm Flask binds `0.0.0.0` by default (network-reachable demo)
-- [ ] Optional: add `pip-audit` or `safety` step in CI (non-blocking OK for demo)
-- [ ] **Docs:** Short “Security notes (demo)” section in README
+- [x] Confirm metrics UI cannot mutate remote hosts
+- [x] Confirm `.gitignore` covers DB, `.env`, keys
+- [x] Confirm Flask binds `0.0.0.0` by default (network-reachable demo)
+- [x] Optional: add `pip-audit` or `safety` step in CI (non-blocking OK for demo)
+- [x] **Docs:** Short “Security notes (demo)” section in README
 
 ### 8.3 CI/CD finalize (GitHub Actions)
-- [ ] CI runs: install → pytest (all tests)
-- [ ] Optional job: lint (`ruff` or `flake8`) if already low-cost
-- [ ] No deploy job required (local demo only) — document “no remote deploy”
-- [ ] **Security:** CI uses env secrets pattern only for placeholders; nothing production-sensitive
-- [ ] **Docs:** Link to workflow file; badge optional
+- [x] CI runs: install → pytest (all tests)
+- [x] Optional job: lint (`ruff` or `flake8`) if already low-cost
+- [x] No deploy job required (local demo only) — document “no remote deploy”
+- [x] **Security:** CI uses env secrets pattern only for placeholders; nothing production-sensitive
+- [x] **Docs:** Link to workflow file; badge optional
 
 ### 8.4 Final acceptance vs PRD
-- [ ] Login as `admin`
-- [ ] Add / edit / delete server
-- [ ] View CPU, memory, disk, network, ports, uptime, processes over SSH
-- [ ] Auto-refresh works
-- [ ] **Docs:** Mark success criteria done in README or keep PRD as source of truth
+- [x] Login as `admin`
+- [x] Add / edit / delete server
+- [x] View CPU, memory, disk, network, ports, uptime, processes over SSH
+- [x] Auto-refresh works
+- [x] **Docs:** Mark success criteria done in README or keep PRD as source of truth
 
 ---
 
